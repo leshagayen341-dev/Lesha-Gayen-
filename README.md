@@ -1,1 +1,261 @@
+
+import sqlite3
+
+# Connect to database
+conn = sqlite3.connect("library.db")
+cursor = conn.cursor()
+
+# Create table
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    category TEXT NOT NULL
+)
+""")
+
+# Insert books
+books = [
+    ("Python Programming", "Reema Thareja", "Programming"),
+    ("Let Us C", "Yashavant Kanetkar", "Programming"),
+    ("Wings of Fire", "APJ Abdul Kalam", "Biography"),
+    ("The Alchemist", "Paulo Coelho", "Fiction"),
+    ("Rich Dad Poor Dad", "Robert Kiyosaki", "Finance"),
+    ("Introduction to AI", "Stuart Russell", "Artificial Intelligence")
+]
+
+cursor.executemany("""
+INSERT INTO books (title, author, category)
+VALUES (?, ?, ?)
+""", books)
+
+# Save changes
+conn.commit()
+
+print("Database created successfully!")
+
+# Close connection
+conn.close()
+
+import sqlite3
+import tkinter as tk
+from tkinter import messagebox
+
+# Database Connection
+conn = sqlite3.connect("library.db")
+cursor = conn.cursor()
+
+# Create Books Table
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    category TEXT NOT NULL
+)
+""")
+
+conn.commit()
+
+
+# Function to Add Book
+def add_book():
+    title = title_entry.get()
+    author = author_entry.get()
+    category = category_entry.get()
+
+    if title == "" or author == "" or category == "":
+        messagebox.showwarning("Warning", "Please fill all fields")
+    else:
+        cursor.execute(
+            "INSERT INTO books (title, author, category) VALUES (?, ?, ?)",
+            (title, author, category)
+        )
+        conn.commit()
+
+        messagebox.showinfo("Success", "Book Added Successfully!")
+
+        title_entry.delete(0, tk.END)
+        author_entry.delete(0, tk.END)
+        category_entry.delete(0, tk.END)
+
+        view_books()
+
+
+# Function to View All Books
+def view_books():
+    book_list.delete(0, tk.END)
+
+    cursor.execute("SELECT * FROM books")
+    books = cursor.fetchall()
+
+    for book in books:
+        book_list.insert(
+            tk.END,
+            f"{book[0]}. {book[1]} - {book[2]} ({book[3]})"
+        )
+
+
+# Function to Search Books
+def search_book():
+    search = search_entry.get()
+
+    book_list.delete(0, tk.END)
+
+    cursor.execute(
+        "SELECT * FROM books WHERE title LIKE ? OR author LIKE ?",
+        ('%' + search + '%', '%' + search + '%')
+    )
+
+    books = cursor.fetchall()
+
+    if books:
+        for book in books:
+            book_list.insert(
+                tk.END,
+                f"{book[0]}. {book[1]} - {book[2]} ({book[3]})"
+            )
+    else:
+        messagebox.showinfo("Result", "No Book Found")
+
+
+# Function to Recommend Books
+def recommend_books():
+    category = category_entry.get()
+
+    if category == "":
+        messagebox.showwarning("Warning", "Enter a category first")
+        return
+
+    book_list.delete(0, tk.END)
+
+    cursor.execute(
+        "SELECT * FROM books WHERE category LIKE ?",
+        ('%' + category + '%',)
+    )
+
+    books = cursor.fetchall()
+
+    if books:
+        for book in books:
+            book_list.insert(
+                tk.END,
+                f"{book[0]}. {book[1]} - {book[2]} ({book[3]})"
+            )
+    else:
+        messagebox.showinfo(
+            "Recommendation",
+            "No books available in this category"
+        )
+
+
+# Function to Delete Book
+def delete_book():
+    selected = book_list.curselection()
+
+    if not selected:
+        messagebox.showwarning("Warning", "Please select a book")
+        return
+
+    book_text = book_list.get(selected[0])
+    book_id = book_text.split(".")[0]
+
+    cursor.execute("DELETE FROM books WHERE id = ?", (book_id,))
+    conn.commit()
+
+    messagebox.showinfo("Success", "Book Deleted Successfully!")
+
+    view_books()
+
+
+# Main Window
+root = tk.Tk()
+root.title("Library Book Recommendation System")
+root.geometry("650x600")
+root.configure(bg="#EAF2F8")
+
+
+# Heading
+heading = tk.Label(
+    root,
+    text="LIBRARY BOOK RECOMMENDATION SYSTEM",
+    font=("Arial", 16, "bold"),
+    bg="#EAF2F8",
+    fg="#154360"
+)
+heading.pack(pady=15)
+
+
+# Input Fields
+tk.Label(root, text="Book Title", bg="#EAF2F8").pack()
+title_entry = tk.Entry(root, width=40)
+title_entry.pack(pady=5)
+
+tk.Label(root, text="Author Name", bg="#EAF2F8").pack()
+author_entry = tk.Entry(root, width=40)
+author_entry.pack(pady=5)
+
+tk.Label(root, text="Category", bg="#EAF2F8").pack()
+category_entry = tk.Entry(root, width=40)
+category_entry.pack(pady=5)
+
+
+# Buttons
+tk.Button(
+    root, text="Add Book", width=20,
+    command=add_book, bg="#28B463", fg="white"
+).pack(pady=5)
+
+tk.Button(
+    root, text="View All Books", width=20,
+    command=view_books, bg="#3498DB", fg="white"
+).pack(pady=5)
+
+
+# Search Section
+tk.Label(root, text="Search by Title or Author", bg="#EAF2F8").pack(pady=5)
+
+search_entry = tk.Entry(root, width=40)
+search_entry.pack(pady=5)
+
+tk.Button(
+    root, text="Search Book", width=20,
+    command=search_book, bg="#8E44AD", fg="white"
+).pack(pady=5)
+
+
+# Recommendation Button
+tk.Button(
+    root, text="Recommend Books", width=20,
+    command=recommend_books, bg="#E67E22", fg="white"
+).pack(pady=5)
+
+
+# Book List
+tk.Label(
+    root, text="Available Books",
+    font=("Arial", 12, "bold"),
+    bg="#EAF2F8"
+).pack(pady=5)
+
+book_list = tk.Listbox(root, width=75, height=10)
+book_list.pack(pady=5)
+
+
+# Delete Button
+tk.Button(
+    root, text="Delete Selected Book", width=20,
+    command=delete_book, bg="#E74C3C", fg="white"
+).pack(pady=10)
+
+
+# Load Books
+view_books()
+
+# Run Application
+root.mainloop()
+
+# Close Database
+conn.close()
 # Lesha-Gayen-
